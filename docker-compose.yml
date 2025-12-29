@@ -1,0 +1,110 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: htmluploader-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: htmluploader
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  flyway:
+    image: flyway/flyway:10
+    container_name: htmluploader-flyway
+    command: migrate
+    volumes:
+      - ./flyway/sql:/flyway/sql
+      - ./flyway/conf:/flyway/conf
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: htmluploader-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: htmluploader-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/htmluploader
+      SECRET_KEY: your-secret-key-change-in-production
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: html-files
+      MINIO_SECURE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    networks:
+      - app-network
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: htmluploader-frontend
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    ports:
+      - "3000:80"
+
+  nginx:
+    image: nginx:alpine
+    container_name: htmluploader-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  app-network:
+    driver: bridge

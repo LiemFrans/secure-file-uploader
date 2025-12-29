@@ -1,0 +1,48 @@
+# Test HTML file for upload
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test HTML File</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to HTML Uploader!</h1>
+        <p>This is a test HTML file uploaded through the HTML Uploader application.</p>
+        <p>Features:</p>
+        <ul>
+            <li>User authentication</li>
+            <li>HTML file upload and storage</li>
+            <li>File locking mechanism</li>
+            <li>MinIO S3 storage</li>
+            <li>PostgreSQL database</li>
+        </ul>
+        <p>Current time: <span id="time"></span></p>
+    </div>
+    <script>
+        setInterval(() => {
+            document.getElementById('time').textContent = new Date().toLocaleString();
+        }, 1000);
+    </script>
+</body>
+</html>
