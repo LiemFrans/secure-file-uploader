@@ -27,3 +27,17 @@ class HtmlFile(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     owner = relationship("User", back_populates="html_files")
+    public_shares = relationship("PublicShare", back_populates="file")
+
+class PublicShare(Base):
+    __tablename__ = "public_shares"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    file_id = Column(Integer, ForeignKey("html_files.id"), nullable=False)
+    share_token = Column(String, unique=True, nullable=False, index=True)
+    password_hash = Column(String)
+    expires_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    file = relationship("HtmlFile", back_populates="public_shares")

@@ -1,12 +1,14 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import List, Optional
 import uuid
 import io
+import secrets
+import bcrypt
 
 from app.config import settings
 from app.database import get_db
@@ -213,6 +215,199 @@ def delete_file(
     db.commit()
     
     return {"message": "File deleted successfully"}
+
+@app.post("/api/files/{file_id}/share", response_model=schemas.PublicShareResponse)
+def create_public_share(
+    file_id: int,
+    share_data: schemas.PublicShareCreate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if file exists and belongs to user
+    db_file = db.query(models.HtmlFile).filter(
+        models.HtmlFile.id == file_id,
+        models.HtmlFile.owner_id == current_user.id
+    ).first()
+    
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Generate unique share token
+    share_token = secrets.token_urlsafe(32)
+    
+    # Hash password if provided
+    password_hash = None
+    if share_data.password:
+        password_hash = bcrypt.hashpw(share_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    # Calculate expiration
+    expires_at = None
+    if share_data.expires_in_hours:
+        expires_at = datetime.utcnow() + timedelta(hours=share_data.expires_in_hours)
+    
+    # Create share
+    public_share = models.PublicShare(
+        file_id=file_id,
+        share_token=share_token,
+        password_hash=password_hash,
+        expires_at=expires_at,
+        created_by=current_user.id
+    )
+    db.add(public_share)
+    db.commit()
+    db.refresh(public_share)
+    
+    # Build share URL
+    share_url = f"/share/{share_token}"
+    
+    return {
+        "id": public_share.id,
+        "file_id": public_share.file_id,
+        "share_token": public_share.share_token,
+        "share_url": share_url,
+        "has_password": bool(password_hash),
+        "expires_at": public_share.expires_at,
+        "created_at": public_share.created_at
+    }
+
+@app.get("/api/files/{file_id}/shares", response_model=List[schemas.PublicShareResponse])
+def list_file_shares(
+    file_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if file belongs to user
+    db_file = db.query(models.HtmlFile).filter(
+        models.HtmlFile.id == file_id,
+        models.HtmlFile.owner_id == current_user.id
+    ).first()
+    
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    shares = db.query(models.PublicShare).filter(
+        models.PublicShare.file_id == file_id
+    ).all()
+    
+    result = []
+    for share in shares:
+        result.append({
+            "id": share.id,
+            "file_id": share.file_id,
+            "share_token": share.share_token,
+            "share_url": f"/share/{share.share_token}",
+            "has_password": bool(share.password_hash),
+            "expires_at": share.expires_at,
+            "created_at": share.created_at
+        })
+    
+    return result
+
+@app.delete("/api/shares/{share_id}")
+def delete_share(
+    share_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    share = db.query(models.PublicShare).filter(
+        models.PublicShare.id == share_id,
+        models.PublicShare.created_by == current_user.id
+    ).first()
+    
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    db.delete(share)
+    db.commit()
+    
+    return {"message": "Share deleted successfully"}
+
+@app.get("/share/{share_token}")
+def access_shared_file(
+    share_token: str,
+    password: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    # Find the share
+    share = db.query(models.PublicShare).filter(
+        models.PublicShare.share_token == share_token
+    ).first()
+    
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Check expiration
+    if share.expires_at and share.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="Share has expired")
+    
+    # Check password
+    if share.password_hash:
+        if not password:
+            return HTMLResponse(content=f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Password Required</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }}
+        .container {{ background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }}
+        h2 {{ margin-top: 0; color: #333; }}
+        input {{ width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }}
+        button {{ width: 100%; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }}
+        button:hover {{ background: #45a049; }}
+        .error {{ color: #c62828; margin-top: 10px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔒 Password Required</h2>
+        <p>This shared file is protected with a password.</p>
+        <form method="GET" action="/share/{share_token}">
+            <input type="password" name="password" placeholder="Enter password" required autofocus>
+            <button type="submit">Access File</button>
+        </form>
+        <div class="error" id="error"></div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('error')) {{
+            document.getElementById('error').textContent = 'Incorrect password';
+        }}
+    </script>
+</body>
+</html>
+            """, status_code=200)
+        
+        # Verify password
+        if not bcrypt.checkpw(password.encode('utf-8'), share.password_hash.encode('utf-8')):
+            return HTMLResponse(content=f"""
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="refresh" content="0;url=/share/{share_token}?error=1"></head>
+</html>
+            """, status_code=401)
+    
+    # Get the file
+    db_file = db.query(models.HtmlFile).filter(
+        models.HtmlFile.id == share.file_id
+    ).first()
+    
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Retrieve from MinIO
+    s3_client = get_s3_client()
+    try:
+        response = s3_client.get_object(Bucket=settings.MINIO_BUCKET, Key=db_file.s3_key)
+        file_content = response['Body'].read()
+        
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type='text/html',
+            headers={"Content-Disposition": f"inline; filename={db_file.filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health_check():

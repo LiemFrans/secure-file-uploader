@@ -42,3 +42,22 @@ class HtmlFileResponse(BaseModel):
 
 class HtmlFileLockUpdate(BaseModel):
     is_locked: bool
+
+class PublicShareCreate(BaseModel):
+    password: Optional[str] = None
+    expires_in_hours: Optional[int] = None
+
+class PublicShareResponse(BaseModel):
+    id: int
+    file_id: int
+    share_token: str
+    share_url: str
+    has_password: bool
+    expires_at: Optional[datetime]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class PublicShareAccess(BaseModel):
+    password: Optional[str] = None

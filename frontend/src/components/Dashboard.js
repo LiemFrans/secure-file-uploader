@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, fileService } from '../services/api';
+import ShareModal from './ShareModal';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -10,6 +11,7 @@ function Dashboard() {
   const [isLocked, setIsLocked] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [shareModalFile, setShareModalFile] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -159,6 +161,11 @@ function Dashboard() {
                     <button onClick={() => handleView(file.id)} className="btn-view">
                       View
                     </button>
+                    <button onClick={() => setShareModalFile(file)}
+                      className="btn-share"
+                    >
+                      Share
+                    </button>
                     <button
                       onClick={() => handleToggleLock(file.id, file.is_locked)}
                       className="btn-lock"
@@ -173,6 +180,14 @@ function Dashboard() {
                       Delete
                     </button>
                   </div>
+
+      {shareModalFile && (
+        <ShareModal
+          fileId={shareModalFile.id}
+          fileName={shareModalFile.original_filename}
+          onClose={() => setShareModalFile(null)}
+        />
+      )}
                 </div>
               ))}
             </div>

@@ -67,6 +67,21 @@ export const fileService = {
     const response = await api.delete(`/files/${fileId}`);
     return response.data;
   },
+  createShare: async (fileId, password, expiresInHours) => {
+    const response = await api.post(`/files/${fileId}/share`, {
+      password: password || null,
+      expires_in_hours: expiresInHours || null
+    });
+    return response.data;
+  },
+  getShares: async (fileId) => {
+    const response = await api.get(`/files/${fileId}/shares`);
+    return response.data;
+  },
+  deleteShare: async (shareId) => {
+    const response = await api.delete(`/shares/${shareId}`);
+    return response.data;
+  },
 };
 
 export default api;
