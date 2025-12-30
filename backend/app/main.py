@@ -258,7 +258,7 @@ def create_public_share(
     db.refresh(public_share)
     
     # Build share URL
-    share_url = f"/share/{share_token}"
+    share_url = f"{settings.BASE_URL}/share/{share_token}"
     
     return {
         "id": public_share.id,
@@ -295,7 +295,7 @@ def list_file_shares(
             "id": share.id,
             "file_id": share.file_id,
             "share_token": share.share_token,
-            "share_url": f"/share/{share.share_token}",
+            "share_url": f"{settings.BASE_URL}/share/{share.share_token}",
             "has_password": bool(share.password_hash),
             "expires_at": share.expires_at,
             "created_at": share.created_at

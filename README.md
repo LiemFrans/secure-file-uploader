@@ -48,7 +48,7 @@ docker-compose up --build
 ### Database
 - User: `postgres`
 - Password: `postgres`
-- Database: `htmluploader`
+- Database: `fileuploader`
 
 ## API Endpoints
 
