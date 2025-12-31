@@ -32,8 +32,7 @@ function ShareModal({ fileId, fileName, onClose }) {
     try {
       const hours = expiresIn ? parseInt(expiresIn) : null;
       const share = await fileService.createShare(fileId, password, hours);
-      const fullUrl = `${window.location.origin}${share.share_url}`;
-      setShareUrl(fullUrl);
+      setShareUrl(share.share_url);
       setPassword('');
       setExpiresIn('');
       await loadShares();
@@ -155,7 +154,7 @@ function ShareModal({ fileId, fileName, onClose }) {
                     <div className="share-info">
                       <div className="share-token">
                         {share.has_password && '🔒 '}
-                        {window.location.origin}{share.share_url}
+                        {share.share_url}
                       </div>
                       <div className="share-meta">
                         <span>Created: {new Date(share.created_at).toLocaleDateString()}</span>
