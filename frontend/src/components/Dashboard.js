@@ -100,7 +100,7 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
-        <h1>HTML Uploader</h1>
+        <h1>File Uploader</h1>
         <div className="user-info">
           <span>Welcome, {user?.username}</span>
           <button onClick={handleLogout} className="btn-secondary">Logout</button>
@@ -109,7 +109,7 @@ function Dashboard() {
 
       <div className="dashboard-content">
         <div className="upload-section">
-          <h2>Upload HTML File</h2>
+          <h2>Upload File</h2>
           {error && <div className="error-message">{error}</div>}
           <div className="upload-form">
             <input

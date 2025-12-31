@@ -1,5 +1,5 @@
 services:
-  db:
+  db-sfu:
     image: postgres:15-alpine
     container_name: fileuploader-db
     env_file:
@@ -19,27 +19,28 @@ services:
       timeout: 5s
       retries: 5
 
-  flyway:
+  flyway-sfu:
     image: flyway/flyway:10
     container_name: fileuploader-flyway
-    command: migrate
+    command: -connectRetries=10 migrate
     env_file:
       - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-fileuploader}
+      FLYWAY_URL: jdbc:postgresql://${POSTGRES_HOST:-fileuploader-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-fileuploader}
+      FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      FLYWAY_SCHEMAS: public
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
     volumes:
       - ./flyway/sql:/flyway/sql
-      - ./flyway/conf:/flyway/conf
     depends_on:
-      db:
+      db-sfu:
         condition: service_healthy
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.70
 
-  minio:
+  minio-sfu:
     image: minio/minio:latest
     container_name: fileuploader-minio
     command: server /data --console-address ":9001"
@@ -59,7 +60,7 @@ services:
       timeout: 20s
       retries: 3
 
-  backend:
+  backend-sfu:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -67,7 +68,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-fileuploader}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGRES_HOST:-fileuploader-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-fileuploader}}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       BASE_URL: ${BASE_URL:-http://localhost}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
@@ -78,17 +79,17 @@ services:
     volumes:
       - ${BACKEND_DATA_DIR:-./fileuploader-data/backend-data}:/app/data
     depends_on:
-      db:
+      db-sfu:
         condition: service_healthy
-      flyway:
+      flyway-sfu:
         condition: service_completed_successfully
-      minio:
+      minio-sfu:
         condition: service_healthy
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.72
 
-  frontend:
+  frontend-sfu:
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -98,22 +99,24 @@ services:
     volumes:
       - ${FRONTEND_DATA_DIR:-./fileuploader-data/frontend-data}:/usr/share/nginx/html/data
     depends_on:
-      - backend
+      - backend-sfu
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.73
 
-  nginx:
+  nginx-sfu:
     image: nginx:alpine
     container_name: fileuploader-nginx
     env_file:
       - .env
+    #ports:
+    #  - "${NGINX_HOST_PORT:-8080}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ${NGINX_DATA_DIR:-./fileuploader-data/nginx-data}:/var/log/nginx
     depends_on:
-      - frontend
-      - backend
+      - frontend-sfu
+      - backend-sfu
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.74

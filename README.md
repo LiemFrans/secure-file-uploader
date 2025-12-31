@@ -1,11 +1,11 @@
-# HTML Uploader Application
+# File Uploader Application
 
 Full-stack application for uploading and viewing HTML files with user authentication and file locking features.
 
 ## Features
 
 - **User Authentication**: Register and login functionality
-- **HTML File Upload**: Upload HTML files to MinIO S3 storage
+- **HTML File Upload**: Upload files to MinIO S3 storage
 - **File Locking**: Lock files to prevent deletion
 - **View Files**: Open uploaded HTML files in browser
 - **Modern Stack**: React frontend, FastAPI backend, PostgreSQL database, MinIO storage
@@ -58,7 +58,7 @@ docker-compose up --build
 - `GET /api/auth/me` - Get current user
 
 ### Files
-- `POST /api/files/upload` - Upload HTML file
+- `POST /api/files/upload` - Upload file
 - `GET /api/files` - List user's files
 - `GET /api/files/{file_id}` - View/download file
 - `PATCH /api/files/{file_id}/lock` - Lock/unlock file

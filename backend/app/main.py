@@ -15,7 +15,7 @@ from app.database import get_db
 from app import models, schemas, auth
 from app.s3_client import get_s3_client, ensure_bucket_exists
 
-app = FastAPI(title="HTML Uploader API")
+app = FastAPI(title="File Uploader API")
 
 # CORS middleware
 app.add_middleware(
