@@ -3,16 +3,16 @@ services:
     image: postgres:15-alpine
     container_name: fileuploader-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fileuploader
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-fileuploader}
     volumes:
       - ${DB_DATA_DIR:-./fileuploader-data/db-data}:/var/lib/postgresql/data
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.69
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,8 +40,8 @@ services:
     container_name: fileuploader-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - ${MINIO_DATA_DIR:-./fileuploader-data/minio-data}:/data
     networks:
@@ -59,14 +59,14 @@ services:
       dockerfile: Dockerfile
     container_name: fileuploader-backend
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/fileuploader
-      SECRET_KEY: your-secret-key-change-in-production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/fileuploader}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       BASE_URL: ${BASE_URL:-http://localhost}
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: html-files
-      MINIO_SECURE: "false"
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-html-files}
+      MINIO_SECURE: ${MINIO_SECURE:-false}
     volumes:
       - ${BACKEND_DATA_DIR:-./fileuploader-data/backend-data}:/app/data
     depends_on:
