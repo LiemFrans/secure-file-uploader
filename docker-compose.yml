@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: fileuploader
     volumes:
-      - ./fileuploader-data/db-data:/var/lib/postgresql/data
+      - ${DB_DATA_DIR:-./fileuploader-data/db-data}:/var/lib/postgresql/data
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.69
@@ -39,7 +39,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - ./fileuploader-data/minio-data:/data
+      - ${MINIO_DATA_DIR:-./fileuploader-data/minio-data}:/data
     networks:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.71
@@ -64,7 +64,7 @@ services:
       MINIO_BUCKET: html-files
       MINIO_SECURE: "false"
     volumes:
-      - ./fileuploader-data/backend-data:/app/data
+      - ${BACKEND_DATA_DIR:-./fileuploader-data/backend-data}:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -82,7 +82,7 @@ services:
       dockerfile: Dockerfile
     container_name: fileuploader-frontend
     volumes:
-      - ./fileuploader-data/frontend-data:/usr/share/nginx/html/data
+      - ${FRONTEND_DATA_DIR:-./fileuploader-data/frontend-data}:/usr/share/nginx/html/data
     depends_on:
       - backend
     networks:
@@ -94,7 +94,7 @@ services:
     container_name: fileuploader-nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./fileuploader-data/nginx-data:/var/log/nginx
+      - ${NGINX_DATA_DIR:-./fileuploader-data/nginx-data}:/var/log/nginx
     depends_on:
       - frontend
       - backend
