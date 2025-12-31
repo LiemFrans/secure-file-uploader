@@ -12,7 +12,7 @@ services:
       vlan_0_bridge_network:
         ipv4_address: 172.168.0.69
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-fileuploader}"]
       interval: 10s
       timeout: 5s
       retries: 5
