@@ -59,7 +59,7 @@ services:
       dockerfile: Dockerfile
     container_name: fileuploader-backend
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/fileuploader}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-fileuploader}}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       BASE_URL: ${BASE_URL:-http://localhost}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
