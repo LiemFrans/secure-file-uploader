@@ -14,6 +14,9 @@ dist/
 *.log
 docker-compose.override.yml
 
+# Ignore volume data
+fileuploader-data/
+
 # Ignore databases
 *.db
 *.sqlite
